@@ -1,0 +1,91 @@
+.pvtAxisContainer li {
+    padding: 3px 2px !important;
+}
+.pvtAttr {
+    font-family:cursive;
+    font-size: 14px;
+    color:blue;
+}
+.pvtRenderer {
+    font-size: 12px !important;
+    background-color: lightgreen;
+}
+.pvtAggregator {
+    font-size: 12px !important;
+    background-color: lightblue;
+}
+.pvtAttrdropdown {
+    font-family:cursive !important;
+    font-size: 14px !important;
+    color:blue;
+    background-color: lightgrey;
+}
+.pvtUnused {
+    background-color: lightyellow !important;
+}
+/* th, td {
+    vertical-align: top; */
+    /* font-weight:normal !important;
+    padding:2px !important; */
+/* } */
+.item-pair {
+    display: inline-block;
+    margin: 0px; /* Adjust margin as needed */
+}
+*:hover {
+    stroke-width:20px;
+  }
+.label {
+    font-family:cursive;
+    font-size: 8px;
+    color:blue;
+}
+.topLayer {
+    z-index: 100;
+    position: absolute;
+    right: 0%;
+    top: 1%;
+    width: 240px;
+}
+.jstree-container-ul {
+font-size: 12px; /* or any size you prefer */
+font-family: "Arial Narrow", "Roboto Condensed", "sans-serif";
+color: blue
+}
+#toolbar {
+    z-index: 100;
+    position: absolute;
+    left:50%;
+    top: 120px;
+    background:rgb(0,200,0,0.2);
+    border: 1px solid #bbb;
+    display: none;
+}
+#toolbarheader {
+    font-size: 9px;
+    margin-bottom: 0px;
+    margin-top: 0px;
+    cursor: move !important;
+}
+#msg {
+    position: absolute;
+    font-size: 14px;
+    right:12%;
+    bottom: 28px;
+    background: lightgreen;
+    /* cursor: move !important; */
+    display: none;
+}
+.page-break {
+    page-break-before: always;
+    break-before: always;
+}
+.legend .bg{
+    opacity: 0.3
+}
+#pdf .pvtRendererArea{
+    zoom: 1.0
+}
+#grpTreeheader {
+    font-size: 11px
+}
