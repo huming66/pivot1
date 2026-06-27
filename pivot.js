@@ -72,46 +72,55 @@ $(function(){
         return vars;
     }
 
-    async function getCfg() {   // to merge with switchCfg() in _gui.js
-        spa.cfg = await getData0(spa.cfg_file)
-        if (spa.cfg.default.derivedAttributes) {
-            Object.keys(spa.cfg.default.derivedAttributes).forEach(k => {
-                spa.cfg.default.derivedAttributes[k] = eval(spa.cfg.default.derivedAttributes[k])
-            })            
-        }
-        // a = await _getPIData()
-        if (spa.cfg['user columns']) {
-            if (typeof(spa.cfg['user columns']) == 'object') {spa.cfg['user columns'] = spa.cfg['user columns'].join(';')}
-            document.getElementById('userCol').value = spa.cfg['user columns'].replace(/[;\n]{1,3} */g,';\n') + '\n==========='
-            // document.getElementById("usrCol").open = true    
-        } else {
-            document.getElementById('userCol').value = ''
-            document.getElementById("usrCol").open = false  
-        }
-        if (spa.cfg?.default?.filter) spa.cfg.default.filter = eval(spa.cfg.default.filter)
-        if (spa.cfg?.hideTotal) {
-            if (spa.cfg.hideTotal == true) {
-                document.getElementById('showTotal').checked = false
-                document.querySelector('#showTotals').value = 'none'                
-            } else if (spa.cfg.hideTotal.toLowerCase() == 'col') {
-                document.querySelector('#showTotals').value = 'col'
-            } else if (spa.cfg.hideTotal.toLowerCase() == 'row') {
-                document.querySelector('#showTotals').value = 'row'
-            } else if (spa.cfg.hideTotal.toLowerCase() == 'all') {
-                document.querySelector('#showTotals').value = 'all'
+    async function getCfg(withJson = 1) {   // to merge with switchCfg() in _gui.js
+        if (withJson == 1) {                // with JSON to read, 
+            spa.cfg = await getData0(spa.cfg_file)
+            if (spa.cfg.default.derivedAttributes) {
+                Object.keys(spa.cfg.default.derivedAttributes).forEach(k => {
+                    spa.cfg.default.derivedAttributes[k] = eval(spa.cfg.default.derivedAttributes[k])
+                })
             }
+            // a = await _getPIData()
+            if (spa.cfg['user columns']) {
+                if (typeof (spa.cfg['user columns']) == 'object') { spa.cfg['user columns'] = spa.cfg['user columns'].join(';') }
+                document.getElementById('userCol').value = spa.cfg['user columns'].replace(/[;\n]{1,3} */g, ';\n') + '\n==========='
+                // document.getElementById("usrCol").open = true    
+            } else {
+                document.getElementById('userCol').value = ''
+                document.getElementById("usrCol").open = false
+            }
+            if (spa.cfg?.default?.filter) spa.cfg.default.filter = eval(spa.cfg.default.filter)
+            spa.jsonRead = 1
+            document.getElementById('title').innerText = spa.cfg.title || 'Title not configured in JSON'
+            if (spa.cfg?.title) document.title = spa.cfg.title.split(' ')[0]
+            if (spa.csv_file?.toLowerCase().includes('history.txt')) document.title = '_' + document.title
         }
-        // if (!spa.cfg?.hideTotal) spa.cfg.hideTotal = 0
-        // if (spa.cfg.hideTotal === fasle ) {
-        //     spa.cfg.hideTotal = 0
-        // } else if (spa.cfg.hideTotal === true ) {
-        //     spa.cfg.hideTotal = 3
-        // }
-        // document.getElementById('showTotal1').selectedIndex = spa.cfg.hideTotal
-        spa.jsonRead = 1
-        document.getElementById('title').innerText = spa.cfg.title || 'Title not configured in JSON'
-        if (spa.cfg?.title) document.title = spa.cfg.title.split(' ')[0]
-        if (spa.csv_file?.toLowerCase().includes('history.txt')) document.title = '_'+document.title
+        if (1 == 1) { //hideTotal        run with or without JSON, for the Pivot table layout
+            if (!spa.cfg) spa.cfg = {}
+            spa.cfg.hideTotal = getUrlVars()['hideTotal'] || getUrlVars()['hidetotal'] || spa.cfg?.hideTotal
+            if (spa.cfg.hideTotal == 'true') spa.cfg.hideTotal = true
+            if (spa.cfg.hideTotal == 'false') spa.cfg.hideTotal = false
+            if (spa.cfg?.hideTotal) {
+                if (spa.cfg.hideTotal == true) {
+                    document.getElementById('showTotal').checked = false
+                    document.querySelector('#showTotals').value = 'none'
+                } else if (spa.cfg.hideTotal.toLowerCase() == 'col') {
+                    document.querySelector('#showTotals').value = 'col'
+                } else if (spa.cfg.hideTotal.toLowerCase() == 'row') {
+                    document.querySelector('#showTotals').value = 'row'
+                } else if (spa.cfg.hideTotal.toLowerCase() == 'all') {
+                    document.querySelector('#showTotals').value = 'all'
+                }
+            }
+            // if (!spa.cfg?.hideTotal) spa.cfg.hideTotal = 0
+            // if (spa.cfg.hideTotal === fasle ) {
+            //     spa.cfg.hideTotal = 0
+            // } else if (spa.cfg.hideTotal === true ) {
+            //     spa.cfg.hideTotal = 3
+            // }
+            // document.getElementById('showTotal1').selectedIndex = spa.cfg.hideTotal    
+        }
+
     }
     var path = getUrlVars()["path"];
     if (path == undefined) {
@@ -137,13 +146,14 @@ $(function(){
     if (cfg == undefined) {
         cfg = "";
         document.getElementById('userCol').value =''
+        getCfg(0)  
     } else {
         cfg = path + '/' +cfg;
         cfg = cfg.replace(/%22/g, '').replace(/%27/g, '')
         // spa.cfg_file = 'http://devgrd02:2222/' + cfg;
         spa.cfg_file = 'http://prodgrd02:2222/' + cfg;
         getCfg()  
-    }   
+    }
     // var t=setInterval(() => { toggleTotal()},200) // running every 200ms
     var parseAndPivot_url = async function (url, dataReady = false, pvtOnly = 0) { //mh, enable url parameter
         if (cfg!='' && !spa.cfg) {
