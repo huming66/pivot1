@@ -47,10 +47,18 @@
                         layers: [osm]
 
                     }).setView([52.0, -114.6], 4);
-                    L.control.zoom({
-                        position: 'topright'
+                    // L.control.zoom({
+                    //     position: 'topright'
+                    // }).addTo(spa.map);
+                    L.control.scale({
+                        position: 'topright', // Positions: 'topleft', 'topright', 'bottomleft', 'bottomright'
+                        metric: true,           // Shows kilometres/metres
+                        imperial: false          // Shows miles/feet
                     }).addTo(spa.map);
-                    var layerControl = L.control.layers(baseMaps, null, { position: 'topright' }).addTo(spa.map)
+                    var layerControl = L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(spa.map)
+                    // var container = layerControl.getContainer();
+                    // container.style.display = 'inline-block';
+                    // container.style.float = 'left';
                     spa.map.setZoom(6)
                     spa.leaflet = {
                         layout: {
@@ -93,7 +101,7 @@
                 // spa['mpid'] = L.featureGroup().addTo(spa.map);                              //   create new layer
                 if (spa['mpid']) spa.map.removeLayer(spa['mpid']); // 先用旧引用从地图移除
                 spa['mpid'] = L.featureGroup().addTo(spa.map)
-                var _tr = '<tr><td><b>__</b></td><td>--</td></tr>'                          // a table row for formatting tooltip and popup content, where __ will be replaced by property name and -- by property value
+                var _tr = '<tr><td><b>__</b></td><td >--</td></tr>'                          // a table row for formatting tooltip and popup content, where __ will be replaced by property name and -- by property value
                 if (window._mapReady) {                                                     // 2026_03 add for "before mapping"
                     _mapReady()                                                             // udf code can be put in _mapReady function, which will be called before mapping
                 } else if (spa.baseMap) {                                                   // additional base map features (not from pivotData, but from spa.baseMap, which can be loaded in _mapReady or before)
@@ -133,8 +141,8 @@
                         // pivotData.getAggregator(pivotData.rowKeys[0], pivotData.colKeys[0])
                         let r = {data: eachPivotRowData} 
                         try {
-                            r.gisType = r.data[0].type;
-                            r.coordinates = r.data[0].coordinates;
+                            r.gisType = r.data[0].gisType || r.data[0].type;
+                            r.coordinates = Object.values(L.latLngBounds(r.data.map(v => v.coordinates)).getCenter()) //r.data[0].coordinates;
                             r.stylePoint = r.data[0].stylePoint;    // one row sample
                             r[pivotData.rowAttrs.join(', ')] = rowkey.join(', ')
                             pivotData.colKeys.forEach(colKey => {                                // loop through colKeys
@@ -146,8 +154,9 @@
                     })      
                     spa.mapStyle = {}                  
                     pivotRowData.forEach(r => {                                              //  loop through pivotRowData                       
-                        try {
+                        try { r.gisType = r.gisType||r.type||'Point'
                             if (r.gisType == 'Point') {
+                                r.stylePoint = r.stylePoint || r.stylepoint || r.style
                                 if (r.stylePoint) {
                                     // eval("_style = {" + r.stylePoint + "}")
                                     _style = r.stylePoint.replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1');
@@ -161,6 +170,7 @@
                                 var ll = L.latLng(r.coordinates[1], r.coordinates[0])
                                 var newUDF = L.circle(ll, { ...spa.leaflet.layout['Point'], ..._style }).addTo(spa['mpid']);
                             } else if (r.gisType == 'LineString') {
+                                r.styleLine = r.styleLine || r.styleline || r.style
                                 if (r.styleLine) {
                                     _style = r.styleLine.replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1');
                                     _style = JSON.parse(_style.replaceAll('#"', '"#'));
@@ -179,8 +189,9 @@
                                     L.marker([r.coordinates[1][1], r.coordinates[1][0]], { icon: icon }).addTo(spa['mpid'])
                                 }
                             } else if (r.gisType == 'Polygon') {
-                                if (r.stylePolygon || r.stylePoint) {
-                                    _style = (r.stylePolygon || r.stylePoint).replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1');
+                                r.stylePolygon = r.stylePolygon || r.stylepolygon || r.stylePoint|| r.stylepoint || r.style 
+                                if (r.stylePolygon) {
+                                    _style = (r.stylePolygon).replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1');
                                     _style = JSON.parse(_style);
                                 }
                                 if (r.coordinates.length == 2) {
@@ -199,7 +210,7 @@
                             }
                             if (newUDF == 1) {
                                 try {
-                                    newUDF = L.geoJSON({ type: 'Feature', geeometry: { type: r.type, coordinates: r.coordinates.map(v => v.map(v => [v[1], v[0]])) } },
+                                    newUDF = L.geoJSON({ type: 'Feature', geeometry: { type: (r.gisType||r.type), coordinates: r.coordinates.map(v => v.map(v => [v[1], v[0]])) } },
                                         {  // onEachFeature: onEachFeature,
                                             style: {
                                                 color: 'rgba(0,0,100,0.2)', // : 'rgba(0,0,0,0.05)',
@@ -224,11 +235,11 @@
                                 let infoKey = Object.keys(r.data[0]).filter(k => !Math.max(...spa.hideColData.map(str => k.includes(str)? 1:0)))
                                 let infoKey0 =  Object.keys(r).filter(k => !Math.max(...spa.hideColPivot.map(str => k.includes(str)? 1:0)))
                                 let infoTxt = infoKey.map(k => r.data.map(v => v[k])).map(v_ => [ ...new Set(v_)].join(' | ').replaceAll('  ',' '))
-                                infoTxt = infoTxt.map(v => v.length > 30? v.slice(0,30) + ' ...': v)
+                                infoTxt = infoTxt.map(v => v.length > 99? v.slice(0,99) + ' ...': v)
                                 // var txt = '<table><tbody>'
                                 //     + ([...pivotData.colAttrs, ...pivotData.rowAttrs, ...pivotData.valAttrs].map(v => _tr.replace('__', v).replace('--', r[v])).join(' ') || r.name)
                                 //     + '</tbody></table>'
-                                var txt = '<table><tbody>'
+                                var txt = '<table><tbody>' //style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
                                     + (infoKey0.map(v => _tr.replace('__', v).replace('--', r[v])).join(' ') || r.name)
                                     + '<tr><td><b>Aggregation</b></td><td><b>'+ pivotData.aggregatorName +'</b></td></tr>'
                                     + (infoKey.map((v, i) => _tr.replace('__', v).replace('--', infoTxt[i])).join(' ') || r.name)
@@ -250,12 +261,20 @@
                     })                       
                 } else {                                                                    // 3.1 map based on spa.dataPC (filtered of spa.data) ... selected pivot value
                     spa.mapStyle = {}
+                    // const markersGroup = L.markerClusterGroup({
+                    //     showCoverageOnHover: false, // Disables the bounding box line on hover
+                    //     zoomToBoundsOnClick: true,  // Automatically zooms into a cluster when clicked
+                    //     spiderfyOnMaxZoom: true,    // Fans out overlapping markers at the highest zoom level
+                    //     maxClusterRadius: 5        // The maximum radius (in pixels) a cluster will cover (Default: 80)
+                    // }).addTo(spa['mpid'])
                     spa.dataPC.forEach(r => {                                               // 3.1.1 loop thru rows in spa.dataPC (filtered of spa.data)
                         var newUDF = 1
                         let _style = {}
                         let _arrStyle = { yawn: 30, size: '10px', fill: false, frequency: 'endonly' }
                         try {
-                            if (r.type == 'Point') {
+                            r.gisType = r.gisType||r.type
+                            if (r.gisType == 'Point') {
+                                r.stylePoint = r.stylePoint || r.stylepoint || r.style
                                 if (r.stylePoint) {
                                     // eval("_style = {" + r.stylePoint + "}")
                                     _style = r.stylePoint.replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1');
@@ -266,19 +285,26 @@
                                         _style.weight = (window.getR||window._getR)(Math.abs(parseFloat(r[_style.weight])), spa.mapStyle.weightRG[0], spa.mapStyle.weightRG[1])
                                     } 
                                 } else if (pivotData.valAttrs[0]) {
-                                    _style.weight = pivotData.valAttrs[0]
-                                    if (!spa.mapStyle.weightRG) spa.mapStyle.weightRG = _getMnMx(_style.weight, spa.dataPC)
-                                    _style.weight = (window.getR||window._getR)(Math.abs(parseFloat(r[_style.weight])), spa.mapStyle.weightRG[0], spa.mapStyle.weightRG[1])
+                                    if (r.styleWeight) {
+                                        _style.weight = r.styleWeight
+                                    } else {
+                                        _style.weight = pivotData.valAttrs[0]
+                                        if (!spa.mapStyle.weightRG) spa.mapStyle.weightRG = _getMnMx(_style.weight, spa.dataPC)
+                                        _style.weight = (window.getR || window._getR)(Math.abs(parseFloat(r[_style.weight])), spa.mapStyle.weightRG[0], spa.mapStyle.weightRG[1])
+                                    }
+                                    if (r.styleOpacity) {
+                                        _style.opacity = r.styleOpacity
+                                    }                                    
                                     _style.color = r.styleColor||r.stylecolor||r.color || 'grey'
                                 }
                                 var ll = L.latLng(r.coordinates[1], r.coordinates[0])
                                 if (_style.radius) {
-                                    var newUDF = L.circleMarker(ll, { ...spa.leaflet.layout['Point'], ..._style }).addTo(spa['mpid']);
+                                    var newUDF = L.circleMarker(ll, { ...spa.leaflet.layout['Point'], ..._style }).addTo(spa['mpid']); //.addTo(markersGroup)
                                 } else {
                                     var newUDF = L.circle(ll, { ...spa.leaflet.layout['Point'], ..._style }).addTo(spa['mpid']);
                                 }
-
-                            } else if (r.type == 'LineString') {
+                            } else if (r.gisType == 'LineString') {
+                                r.styleLine = r.styleLine || r.styleline || r.style
                                 if (r.styleLine) {
                                     _style = r.styleLine.replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1');
                                     _style = JSON.parse(_style.replaceAll('#"', '"#'));
@@ -296,9 +322,10 @@
                                     var icon = L.divIcon({ iconSize: [0, 0], html: r.label })
                                     L.marker([r.coordinates[1][1], r.coordinates[1][0]], { icon: icon }).addTo(spa['mpid'])
                                 }
-                            } else if (r.type == 'Polygon') {
-                                if (r.stylePolygon || r.stylePoint) {
-                                    _style = (r.stylePolygon || r.stylePoint).replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1');
+                            } else if (r.gisType == 'Polygon') {
+                                r.stylePolygon = r.stylePolygon || r.stylepolygon || r.stylePoint|| r.stylepoint || r.style 
+                                if (r.stylePolygon) {
+                                    _style = (r.stylePolygon).replace(/([\w\d\.]+)/g, '"$1"').replace(/"([\d\.]+)"/g, '$1').replace('"false"','false').replace('"true"','true');
                                     _style = JSON.parse(_style);
                                 }
                                 if (r.coordinates.length == 2) {
@@ -317,7 +344,7 @@
                             }
                             if (newUDF == 1) {
                                 try {
-                                    newUDF = L.geoJSON({ type: 'Feature', geeometry: { type: r.type, coordinates: r.coordinates.map(v => v.map(v => [v[1], v[0]])) } },
+                                    newUDF = L.geoJSON({ type: 'Feature', geeometry: { type: r.gisType, coordinates: r.coordinates.map(v => v.map(v => [v[1], v[0]])) } },
                                         {  // onEachFeature: onEachFeature,
                                             style: {
                                                 color: 'rgba(0,0,100,0.2)', // : 'rgba(0,0,0,0.05)',
